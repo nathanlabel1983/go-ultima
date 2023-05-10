@@ -9,24 +9,33 @@ import (
 )
 
 type TCPServer struct {
-	nextID int               // The next ID to assign to a connection
-	conns  map[int]*net.Conn // Map of connections, int is the connection ID
-	mutex  sync.Mutex        // Mutex to protect the TCPServer
+	nextID  int                   // The next ID to assign to a connection
+	address string                // The address to listen on
+	conns   map[int]*net.Conn     // Map of connections, int is the connection ID
+	packets chan packets.Packeter // Channel of Packets
+	mutex   sync.Mutex            // Mutex to protect the TCPServer
 
 	//Signals
 	Kill chan struct{} // Kill signal for the TCPServer
 }
 
-func NewTCPServer() *TCPServer {
+type TCPServerStatus struct {
+	ActiveConnections int    `json:"active_connections"`
+	IPAddress         string `json:"ip_address"`
+}
+
+func NewTCPServer(addr string) *TCPServer {
 	return &TCPServer{
-		nextID: 0,
-		conns:  make(map[int]*net.Conn),
-		Kill:   make(chan struct{}),
+		nextID:  0,
+		address: addr,
+		conns:   make(map[int]*net.Conn),
+		packets: make(chan packets.Packeter, 100),
+		Kill:    make(chan struct{}),
 	}
 }
 
-func (s *TCPServer) Listen(address string) error {
-	l, err := net.Listen("tcp", address)
+func (s *TCPServer) Listen() error {
+	l, err := net.Listen("tcp", s.address)
 	if err != nil {
 		panic(err)
 	}
@@ -76,14 +85,27 @@ func (s *TCPServer) handleConnection(connection *net.Conn) {
 			// Read from connection
 			packet_id := make([]byte, 1)
 			_, err := (*connection).Read(packet_id)
-			data := make([]byte, packets.PacketSizes[packet_id[0]])
-			fmt.Println(data)
 			if err != nil {
 				fmt.Printf("TCPServer: Connection %d closed\n", id)
 				return
 			}
-
+			data := make([]byte, packets.PacketSizes[packet_id[0]])
+			_, err = (*connection).Read(data)
+			if err != nil {
+				fmt.Printf("TCPServer: Connection %d closed\n", id)
+				return
+			}
+			p := packets.NewPacket(packet_id[0], id, uint16(len(data)), data)
+			s.packets <- p
 		}
 	}
+}
 
+// GetStatus returns an int with the number of active connections
+func (s *TCPServer) GetStatus() TCPServerStatus {
+	status := TCPServerStatus{
+		ActiveConnections: len(s.conns),
+		IPAddress:         s.address,
+	}
+	return status
 }
