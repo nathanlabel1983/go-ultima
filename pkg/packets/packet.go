@@ -1,9 +1,13 @@
 package packets
 
+import "fmt"
+
 type Packeter interface {
 	GetID() byte
 	GetName() string
 	GetSize() uint16
+	GetConnID() int
+	GetData() []byte
 }
 
 type packet struct {
@@ -19,7 +23,10 @@ func NewPacket(id byte, connID int, size uint16, data []byte) Packeter {
 	switch id {
 	case 0xEF:
 		return newLoginSeedPacket(p)
+	case 0x80:
+		return newLoginRequestPacket(p)
 	default:
+		fmt.Println("Unknown packet ID: ", id)
 		return nil
 	}
 }

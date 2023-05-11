@@ -22,6 +22,14 @@ func (p *LoginSeedPacket) GetSize() uint16 {
 	return p.packet.size
 }
 
+func (p *LoginSeedPacket) GetConnID() int {
+	return p.packet.connID
+}
+
+func (p *LoginSeedPacket) GetData() []byte {
+	return p.packet.data
+}
+
 func newLoginSeedPacket(p packet) Packeter {
 	return &LoginSeedPacket{packet: p}
 }

@@ -12,7 +12,7 @@ type TCPServer struct {
 	nextID  int                   // The next ID to assign to a connection
 	address string                // The address to listen on
 	conns   map[int]*net.Conn     // Map of connections, int is the connection ID
-	packets chan packets.Packeter // Channel of Packets
+	Packets chan packets.Packeter // Channel of Packets
 	mutex   sync.Mutex            // Mutex to protect the TCPServer
 
 	//Signals
@@ -29,7 +29,7 @@ func NewTCPServer(addr string) *TCPServer {
 		nextID:  0,
 		address: addr,
 		conns:   make(map[int]*net.Conn),
-		packets: make(chan packets.Packeter, 100),
+		Packets: make(chan packets.Packeter, 100),
 		Kill:    make(chan struct{}),
 	}
 }
@@ -96,7 +96,8 @@ func (s *TCPServer) handleConnection(connection *net.Conn) {
 				return
 			}
 			p := packets.NewPacket(packet_id[0], id, uint16(len(data)), data)
-			s.packets <- p
+			fmt.Println("Packet Received: ", p.GetName())
+			s.Packets <- p
 		}
 	}
 }
@@ -108,4 +109,20 @@ func (s *TCPServer) GetStatus() TCPServerStatus {
 		IPAddress:         s.address,
 	}
 	return status
+}
+
+// SendPacket sends a Packeter to the connection with the specified ID
+func (s *TCPServer) SendPacket(p packets.Packeter) error {
+	s.mutex.Lock()
+	defer s.mutex.Unlock()
+	conn, ok := s.conns[p.GetConnID()]
+	if !ok {
+		return fmt.Errorf("TCPServer: Connection %d not found", p.GetConnID())
+	}
+	d := append([]byte{p.GetID()}, p.GetData()...)
+	_, err := (*conn).Write(d)
+	if err != nil {
+		return fmt.Errorf("TCPServer: Error sending packet to connection %d", p.GetConnID())
+	}
+	return nil
 }
