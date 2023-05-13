@@ -1,0 +1,13 @@
+{
+    "Server": {
+        "IPAddress" : "127.0.0.1",
+        "Port" : 2597
+    },
+    "Game": {
+        "ShardName": "Test Shard",
+
+        "Configs": {
+            "Accounts": "\\data\\accounts.json"
+        }
+    }
+}

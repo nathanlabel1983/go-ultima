@@ -1,4 +1,4 @@
-package packets
+package client
 
 import (
 	"bytes"
@@ -6,53 +6,66 @@ import (
 	"fmt"
 )
 
+const (
+	LoginSeedPacketSize = 21
+	LoginSeedPacketName = "KR/2D Client Login/Seed"
+	LoginSeedPacketID   = 0xEF
+)
+
 type LoginSeedPacket struct {
-	packet packet
+	connID int    // The connection ID
+	data   []byte // The packet data
 }
 
 func (p *LoginSeedPacket) GetID() byte {
-	return p.packet.id
+	return LoginSeedPacketID
 }
 
 func (p *LoginSeedPacket) GetName() string {
-	return PacketNames[p.packet.id]
+	return LoginSeedPacketName
 }
 
 func (p *LoginSeedPacket) GetSize() uint16 {
-	return p.packet.size
+	return LoginSeedPacketSize
 }
 
 func (p *LoginSeedPacket) GetConnID() int {
-	return p.packet.connID
+	return p.connID
 }
 
 func (p *LoginSeedPacket) GetData() []byte {
-	return p.packet.data
+	return p.data
 }
 
-func newLoginSeedPacket(p packet) Packeter {
-	return &LoginSeedPacket{packet: p}
+func NewLoginSeedPacket(connID int, data []byte) *LoginSeedPacket {
+	if len(data) != LoginSeedPacketSize-1 {
+		panic("KR/2D Client Login/Seed: data size is wrong")
+	}
+	return &LoginSeedPacket{
+		connID: connID,
+		data:   data,
+	}
 }
 
 // GetSeed returns the seed, usually also the client IP
 func (p *LoginSeedPacket) GetSeed() string {
-	return fmt.Sprintf("%d.%d.%d.%d", p.packet.data[4], p.packet.data[5], p.packet.data[6], p.packet.data[7])
+	return fmt.Sprintf("%d.%d.%d.%d", p.data[4], p.data[5], p.data[6], p.data[7])
 }
 
 func (p *LoginSeedPacket) GetMajor() (int, error) {
-	return getIntVal(p.packet.data[4:8])
+	return getIntVal(p.data[4:8])
 }
 
 func (p *LoginSeedPacket) GetMinor() (int, error) {
-	return getIntVal(p.packet.data[8:12])
+	return getIntVal(p.data[8:12])
 }
 
 func (p *LoginSeedPacket) GetRevision() (int, error) {
-	return getIntVal(p.packet.data[12:16])
+	return getIntVal(p.data[12:16])
 }
 
 func (p *LoginSeedPacket) GetPrototype() (int, error) {
-	return getIntVal(p.packet.data[16:20])
+	return getIntVal(p.data[16:20])
 }
 
 // GetVersion returns the version of the client

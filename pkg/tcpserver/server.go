@@ -11,6 +11,7 @@ import (
 type TCPServer struct {
 	nextID  int                   // The next ID to assign to a connection
 	address string                // The address to listen on
+	port    int                   // The port to listen on
 	conns   map[int]*net.Conn     // Map of connections, int is the connection ID
 	Packets chan packets.Packeter // Channel of Packets
 	mutex   sync.Mutex            // Mutex to protect the TCPServer
@@ -22,12 +23,14 @@ type TCPServer struct {
 type TCPServerStatus struct {
 	ActiveConnections int    `json:"active_connections"`
 	IPAddress         string `json:"ip_address"`
+	Port              int    `json:"port"`
 }
 
-func NewTCPServer(addr string) *TCPServer {
+func NewTCPServer(addr string, port int) *TCPServer {
 	return &TCPServer{
 		nextID:  0,
 		address: addr,
+		port:    port,
 		conns:   make(map[int]*net.Conn),
 		Packets: make(chan packets.Packeter, 100),
 		Kill:    make(chan struct{}),
@@ -35,7 +38,7 @@ func NewTCPServer(addr string) *TCPServer {
 }
 
 func (s *TCPServer) Listen() error {
-	l, err := net.Listen("tcp", s.address)
+	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", s.address, s.port))
 	if err != nil {
 		panic(err)
 	}
@@ -95,8 +98,8 @@ func (s *TCPServer) handleConnection(connection *net.Conn) {
 				fmt.Printf("TCPServer: Connection %d closed\n", id)
 				return
 			}
-			p := packets.NewPacket(packet_id[0], id, uint16(len(data)), data)
-			fmt.Println("Packet Received: ", p.GetName())
+			p := packets.NewPacket(packet_id[0], id, data)
+			fmt.Printf("Packet Received: %v\n", p.GetName())
 			s.Packets <- p
 		}
 	}
@@ -107,6 +110,7 @@ func (s *TCPServer) GetStatus() TCPServerStatus {
 	status := TCPServerStatus{
 		ActiveConnections: len(s.conns),
 		IPAddress:         s.address,
+		Port:              s.port,
 	}
 	return status
 }
