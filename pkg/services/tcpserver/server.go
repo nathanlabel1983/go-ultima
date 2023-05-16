@@ -13,11 +13,11 @@ type TCPServer struct {
 	address string                // The address to listen on
 	port    int                   // The port to listen on
 	conns   map[int]*net.Conn     // Map of connections, int is the connection ID
-	Packets chan packets.Packeter // Channel of Packets
+	packets chan packets.Packeter // Channel of Packets
 	mutex   sync.Mutex            // Mutex to protect the TCPServer
 
 	//Signals
-	Kill chan struct{} // Kill signal for the TCPServer
+	kill chan struct{} // Kill signal for the TCPServer
 }
 
 type TCPServerStatus struct {
@@ -32,12 +32,12 @@ func NewTCPServer(addr string, port int) *TCPServer {
 		address: addr,
 		port:    port,
 		conns:   make(map[int]*net.Conn),
-		Packets: make(chan packets.Packeter, 100),
-		Kill:    make(chan struct{}),
+		packets: make(chan packets.Packeter, 100),
+		kill:    make(chan struct{}),
 	}
 }
 
-func (s *TCPServer) Listen() error {
+func (s *TCPServer) Start() error {
 	l, err := net.Listen("tcp", fmt.Sprintf("%s:%d", s.address, s.port))
 	if err != nil {
 		panic(err)
@@ -59,7 +59,7 @@ func (s *TCPServer) Listen() error {
 
 	for {
 		select {
-		case <-s.Kill:
+		case <-(s.kill):
 			fmt.Println("TCPServer: Kill signal received")
 			return nil
 		case c := <-connChan:
@@ -67,6 +67,11 @@ func (s *TCPServer) Listen() error {
 			go s.handleConnection(&c)
 		}
 	}
+}
+
+func (s *TCPServer) Stop() error {
+	s.kill <- struct{}{}
+	return nil
 }
 
 func (s *TCPServer) handleConnection(connection *net.Conn) {
@@ -81,7 +86,7 @@ func (s *TCPServer) handleConnection(connection *net.Conn) {
 
 	for {
 		select {
-		case <-s.Kill:
+		case <-s.kill:
 			fmt.Printf("TCPServer: Connection %d closing\n", id)
 			return
 		default:
@@ -100,7 +105,7 @@ func (s *TCPServer) handleConnection(connection *net.Conn) {
 			}
 			p := packets.NewPacket(packet_id[0], id, data)
 			fmt.Printf("Packet Received: %v\n", p.GetName())
-			s.Packets <- p
+			s.packets <- p
 		}
 	}
 }
@@ -129,4 +134,8 @@ func (s *TCPServer) SendPacket(p packets.Packeter) error {
 		return fmt.Errorf("TCPServer: Error sending packet to connection %d", p.GetConnID())
 	}
 	return nil
+}
+
+func (s *TCPServer) GetPackets() *chan packets.Packeter {
+	return &s.packets
 }

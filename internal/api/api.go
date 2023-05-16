@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/nathanlabel1983/go-ultima/pkg/tcpserver"
+	"github.com/nathanlabel1983/go-ultima/pkg/services/tcpserver"
 )
 
 func GetServerStatus(s *tcpserver.TCPServer, w http.ResponseWriter, r *http.Request) {

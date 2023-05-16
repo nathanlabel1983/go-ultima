@@ -1,11 +1,15 @@
 
 [
     {
+        "ID": 1,
         "Username": "abeln",
-        "Password": "password"
+        "Password": "password",
+        "LastLogon": ""
     },
     {
+        "ID": 2,
         "Username": "test",
-        "Password": "password123"
+        "Password": "password123",
+        "LastLogon": ""
     }
 ]

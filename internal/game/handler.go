@@ -1,4 +1,4 @@
-package handlers
+package game
 
 import (
 	"fmt"
@@ -6,6 +6,7 @@ import (
 	"github.com/nathanlabel1983/go-ultima/pkg/packets"
 	"github.com/nathanlabel1983/go-ultima/pkg/packets/client"
 	"github.com/nathanlabel1983/go-ultima/pkg/packets/server"
+	"github.com/nathanlabel1983/go-ultima/pkg/shared"
 )
 
 type PacketSender interface {
@@ -19,4 +20,9 @@ func LoginRequestPacketHandler(s PacketSender, p packets.Packeter) {
 	// To Implement: Handle Authentication, then if sucessful do the below.
 	a := server.NewGameServerListPacket(pkt.GetConnID(), "Test")
 	s.SendPacket(&a)
+}
+
+func LoginSeedPacketHandler(d shared.GameData, p packets.Packeter) {
+	pkt := p.(*client.LoginSeedPacket)
+	fmt.Printf("Game: %v sent %v\n", pkt.GetConnID(), pkt.GetName())
 }
