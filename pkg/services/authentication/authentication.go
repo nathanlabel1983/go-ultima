@@ -46,11 +46,11 @@ func (s *AuthService) Stop() error {
 	return nil
 }
 
-func (s *AuthService) AuthAccount(username, password string) (shared.Account, error) {
+func (s *AuthService) AuthAccount(username, password string) bool {
 	for _, account := range s.accounts {
 		if account.Username == username && account.Password == password {
-			return account, nil
+			return true
 		}
 	}
-	return shared.Account{}, fmt.Errorf("unable to find account for: %v", username)
+	return false
 }

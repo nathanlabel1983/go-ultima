@@ -14,15 +14,54 @@ type PacketSender interface {
 }
 
 // LoginRequestPacketHandler handles the LoginRequestPacket, it will request authentication from the database.
-func LoginRequestPacketHandler(s PacketSender, p packets.Packeter) {
+func LoginRequestPacketHandler(d shared.GameData, p packets.Packeter) {
 	pkt := p.(*client.LoginRequestPacket)
 	fmt.Printf("Game: %v sent %v\nUsername: %v\nPassword: %v\n", pkt.GetConnID(), pkt.GetName(), pkt.GetAccountName(), pkt.GetPassword())
-	// To Implement: Handle Authentication, then if sucessful do the below.
-	a := server.NewGameServerListPacket(pkt.GetConnID(), "Test")
-	s.SendPacket(&a)
+	// First check if the account exists, then check that it has been seeded
+	// If it has been seeded, then check the password, if it is correct, then
+	// set the account to authenticated. Finally Send a message to the client
+
+	a, ok := d.Accounts[pkt.GetConnID()]
+	if !ok {
+		fmt.Printf("Account does not exist for connection: %v\n", pkt.GetConnID())
+		return
+	}
+	if a.Flags&shared.SeededFlag == 0 {
+		fmt.Printf("Account has not been seeded for connection: %v\n", pkt.GetConnID())
+		return
+	}
+	if a.Flags&shared.AuthenticatedFlag != 0 {
+		fmt.Printf("Account is already authenticated for connection: %v\n", pkt.GetConnID())
+		return
+	}
+
+	// Get the Authentication Service
+	var as shared.AuthenticationServicePort = d.Services[AuthServiceName].(shared.AuthenticationServicePort)
+	if as.AuthAccount(pkt.GetAccountName(), pkt.GetPassword()) {
+		a.Flags |= shared.AuthenticatedFlag
+		a.Username = pkt.GetAccountName()
+		a.Password = pkt.GetPassword()
+		d.Accounts[pkt.GetConnID()] = a
+		// Now that its authenticated, LoginRequestPacketHandler should always send the GameServer list
+		var s shared.TCPServerServicePort = d.Services[TCPServiceName].(shared.TCPServerServicePort)
+		var p packets.Packeter = server.NewGameServerListPacket(a.ConnID, "Test")
+		go s.SendPacket(p)
+	}
 }
 
-func LoginSeedPacketHandler(d shared.GameData, p packets.Packeter) {
+func LoginSeedPacketHandler(d shared.GameData, p packets.Packeter) (*shared.Account, error) {
 	pkt := p.(*client.LoginSeedPacket)
 	fmt.Printf("Game: %v sent %v\n", pkt.GetConnID(), pkt.GetName())
+	_, ok := d.Accounts[pkt.GetConnID()]
+	if ok {
+		fmt.Printf("Account already exists for connection: %v\n", pkt.GetConnID())
+		return nil, fmt.Errorf("Account already exists for connection: %v", pkt.GetConnID())
+	} else {
+		a := shared.Account{
+			ConnID: pkt.GetConnID(),
+			Flags:  shared.SeededFlag,
+		}
+		d.Accounts[pkt.GetConnID()] = a
+		return &a, nil
+	}
 }

@@ -33,7 +33,7 @@ func (p *GameServerListPacket) GetData() []byte {
 	return p.data
 }
 
-func NewGameServerListPacket(connID int, serverName string) GameServerListPacket {
+func NewGameServerListPacket(connID int, serverName string) *GameServerListPacket {
 	p := GameServerListPacket{
 		connID: connID,
 		data:   make([]byte, GameServerListPacketSize-1),
@@ -57,5 +57,5 @@ func NewGameServerListPacket(connID int, serverName string) GameServerListPacket
 	p.data[42] = 0
 	p.data[43] = 0
 	p.data[44] = 127
-	return p
+	return &p
 }

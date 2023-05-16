@@ -1,10 +1,7 @@
 package game
 
 import (
-	"fmt"
-
 	"github.com/nathanlabel1983/go-ultima/data"
-	"github.com/nathanlabel1983/go-ultima/internal/game/ports"
 
 	"github.com/nathanlabel1983/go-ultima/pkg/packets/client"
 	"github.com/nathanlabel1983/go-ultima/pkg/services/authentication"
@@ -19,20 +16,20 @@ const (
 
 type Game struct {
 	shared.GameData
-	config   data.Config
-	Services map[string]ports.ServicePort // Services that the game provides
-	Accounts map[int]Account              // Accounts that are currently logged in
+	config data.Config
 	// Signals
 	Kill chan struct{}
 }
 
 func NewGame() *Game {
 	g := Game{
-		Services: make(map[string]ports.ServicePort),
-		Accounts: make(map[int]Account),
-		Kill:     make(chan struct{}),
+		GameData: shared.GameData{
+			Accounts: make(map[int]shared.Account),
+			Services: make(map[string]shared.ServicePort),
+		},
 	}
-	g.config = data.LoadConfiguration("\\data\\configuration.json") // Load all config data
+
+	data.LoadConfiguration("\\data\\configuration.json") // Load all config data
 	// Register all services
 
 	// Register TCP Server
@@ -52,32 +49,16 @@ func NewGame() *Game {
 	return &g
 }
 
-func (g *Game) RegisterService(name string, service ports.ServicePort) {
+func (g *Game) RegisterService(name string, service shared.ServicePort) {
 	g.Services[name] = service
 }
 
-func (g *Game) GetService(name string) ports.ServicePort {
+func (g *Game) GetService(name string) shared.ServicePort {
 	return g.Services[name]
 }
 
 func (g *Game) DeregisterService(name string) {
 	delete(g.Services, name)
-}
-
-func (g *Game) GetAccount(id int) (Account, error) {
-	a, ok := g.Accounts[id]
-	if !ok {
-		return Account{}, fmt.Errorf("Game: Unable to find account with id: %d", id)
-	}
-	return a, nil
-}
-
-func (g *Game) AddAccount(id, connID int, username string) {
-	g.Accounts[id] = *NewAccount(id, connID, username)
-}
-
-func (g *Game) RemoveAccount(id int) {
-	delete(g.Accounts, id)
 }
 
 func (g *Game) Start() error {
