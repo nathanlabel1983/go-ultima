@@ -37,16 +37,21 @@ func LoginRequestPacketHandler(d shared.GameData, p packets.Packeter) {
 
 	// Get the Authentication Service
 	var as shared.AuthenticationServicePort = d.Services[AuthServiceName].(shared.AuthenticationServicePort)
-	if as.AuthAccount(pkt.GetAccountName(), pkt.GetPassword()) {
-		a.Flags |= shared.AuthenticatedFlag
-		a.Username = pkt.GetAccountName()
-		a.Password = pkt.GetPassword()
-		d.Accounts[pkt.GetConnID()] = a
-		// Now that its authenticated, LoginRequestPacketHandler should always send the GameServer list
-		var s shared.TCPServerServicePort = d.Services[TCPServiceName].(shared.TCPServerServicePort)
-		var p packets.Packeter = server.NewGameServerListPacket(a.ConnID, "Test")
-		go s.SendPacket(p)
+	accID, err := as.AuthAccount(pkt.GetAccountName(), pkt.GetPassword())
+	if err != nil {
+		fmt.Printf("Error authenticating account: %v\n", err)
+		return
 	}
+	a.Flags |= shared.AuthenticatedFlag // Set the authenticated flag
+	a.Username = pkt.GetAccountName()
+	a.Password = pkt.GetPassword()
+	a.ID = accID
+	d.Accounts[pkt.GetConnID()] = a
+	// Now that its authenticated, LoginRequestPacketHandler should always send the GameServer list
+	var s shared.TCPServerServicePort = d.Services[TCPServiceName].(shared.TCPServerServicePort)
+	var serverPkt packets.Packeter = server.NewGameServerListPacket(a.ConnID, "Test")
+	go s.SendPacket(serverPkt)
+
 }
 
 func LoginSeedPacketHandler(d shared.GameData, p packets.Packeter) (*shared.Account, error) {

@@ -7,6 +7,23 @@ import (
 	"github.com/nathanlabel1983/go-ultima/pkg/services/tcpserver"
 )
 
+type API struct {
+	server    *tcpserver.TCPServer // The TCP server
+	webserver *http.Server         // The web server
+	running   bool                 // Is the service running?
+}
+
+func NewAPI(server *tcpserver.TCPServer) *API {
+	return &API{
+		server: server,
+		webserver: &http.Server{
+			Addr:    ":8080",
+			Handler: nil,
+		},
+	}
+}
+
+// GetServerStatus returns the server status
 func GetServerStatus(s *tcpserver.TCPServer, w http.ResponseWriter, r *http.Request) {
 	status := s.GetStatus()
 	jsonData, err := json.Marshal(status)
@@ -18,11 +35,19 @@ func GetServerStatus(s *tcpserver.TCPServer, w http.ResponseWriter, r *http.Requ
 	w.Write(jsonData)
 }
 
-func StartAPI(s *tcpserver.TCPServer) {
+// StartAPI starts the API Web Service
+func (api *API) Start() error {
 	getServerStatus := func(w http.ResponseWriter, r *http.Request) {
-		GetServerStatus(s, w, r)
+		api.GetServerStatus(api.server, w, r)
 	}
 
-	http.HandleFunc("/GetServerStatus", getServerStatus)
-	http.ListenAndServe(":8080", nil)
+	api.webserver.HandleFunc("/GetServerStatus", getServerStatus)
+	go http.ListenAndServe(":8080", nil)
+	api.running = true
+	return nil
+}
+
+func (api *API) Stop() error {
+	api.running = false
+	return nil
 }

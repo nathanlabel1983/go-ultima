@@ -16,7 +16,7 @@ const (
 
 // Account represents a user account
 type Account struct {
-	ID        string `json:"ID"`
+	ID        int    `json:"ID"`
 	Username  string `json:"Username"`
 	Password  string `json:"Password"`
 	LastLogon string `json:"LastLogon"`
@@ -41,7 +41,7 @@ type ServicePort interface {
 
 type AuthenticationServicePort interface {
 	ServicePort
-	AuthAccount(username, password string) bool
+	AuthAccount(username, password string) (int, error)
 }
 
 type TCPServerServicePort interface {

@@ -46,11 +46,12 @@ func (s *AuthService) Stop() error {
 	return nil
 }
 
-func (s *AuthService) AuthAccount(username, password string) bool {
+// AuthAccount authenticates the account, it will return account id if successful, or error if false
+func (s *AuthService) AuthAccount(username, password string) (int, error) {
 	for _, account := range s.accounts {
 		if account.Username == username && account.Password == password {
-			return true
+			return account.ID, nil
 		}
 	}
-	return false
+	return 0, fmt.Errorf("AuthService: unable to authenticate account: %s", username)
 }
